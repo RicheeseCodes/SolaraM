@@ -2,6 +2,83 @@
 set -euo pipefail
 clear
 
+SOLARA_ICON_PRIMARY="fs.png"
+SOLARA_ICON_FALLBACK="fs.png"
+SOLARA_ICON_BUNDLE="fs"
+
+find_local_icon() {
+  local name="$1"
+  local path=""
+
+  if command -v mdfind >/dev/null 2>&1; then
+    path=$(mdfind "kMDItemFSName == '$name'" | head -n 1 || true)
+  fi
+
+  if [ -z "$path" ]; then
+    for dir in "$HOME/Downloads" "$HOME/Desktop" "$HOME/Documents" "$HOME/Pictures" "$HOME"; do
+      if [ -f "$dir/$name" ]; then
+        path="$dir/$name"
+        break
+      fi
+    done
+  fi
+
+  if [ -z "$path" ]; then
+    for dir in "/Applications" "/Library" "/System/Library"; do
+      if [ -f "$dir/$name" ]; then
+        path="$dir/$name"
+        break
+      fi
+    done
+  fi
+
+  echo "$path"
+}
+
+apply_app_icon() {
+  local app_path="$1"
+  local icon_name="$2"
+  local icon_fallback="$3"
+  local bundle_name="$4"
+
+  local icon_png
+  icon_png="$(find_local_icon "$icon_name")"
+  if [ -z "$icon_png" ] && [ -n "$icon_fallback" ]; then
+    icon_png="$(find_local_icon "$icon_fallback")"
+  fi
+
+  if [ -z "$icon_png" ]; then
+    echo "⚠️  Icon not found; keeping default app icon."
+    return 0
+  fi
+
+  local info_plist="$app_path/Contents/Info.plist"
+  local icon_tmp
+  icon_tmp="$(mktemp -d)"
+  local iconset="$icon_tmp/${bundle_name}.iconset"
+  local icns="$icon_tmp/${bundle_name}.icns"
+
+  mkdir -p "$iconset"
+  sips -z 16 16 "$icon_png" --out "$iconset/icon_16x16.png" >/dev/null
+  sips -z 32 32 "$icon_png" --out "$iconset/icon_16x16@2x.png" >/dev/null
+  sips -z 32 32 "$icon_png" --out "$iconset/icon_32x32.png" >/dev/null
+  sips -z 64 64 "$icon_png" --out "$iconset/icon_32x32@2x.png" >/dev/null
+  sips -z 128 128 "$icon_png" --out "$iconset/icon_128x128.png" >/dev/null
+  sips -z 256 256 "$icon_png" --out "$iconset/icon_128x128@2x.png" >/dev/null
+  sips -z 256 256 "$icon_png" --out "$iconset/icon_256x256.png" >/dev/null
+  sips -z 512 512 "$icon_png" --out "$iconset/icon_256x256@2x.png" >/dev/null
+  sips -z 512 512 "$icon_png" --out "$iconset/icon_512x512.png" >/dev/null
+  sips -z 1024 1024 "$icon_png" --out "$iconset/icon_512x512@2x.png" >/dev/null
+
+  iconutil -c icns "$iconset" -o "$icns"
+  cp "$icns" "$app_path/Contents/Resources/${bundle_name}.icns"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile ${bundle_name}" "$info_plist" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string ${bundle_name}" "$info_plist"
+
+  codesign --force --deep --sign - "$app_path" >/dev/null 2>&1 || true
+  rm -rf "$icon_tmp"
+}
+
 bash <(curl -fsSL "https://raw.githubusercontent.com/RicheeseCodes/SolaraM/refs/heads/main/opiumware-install.sh")
 
 REPO="RicheeseCodes/SolaraM"
@@ -66,6 +143,9 @@ if [ -w /Applications ]; then
 else
   sudo cp -R "$APP_SRC" /Applications/
 fi
+
+echo "🎨 Applying Solara icon..."
+apply_app_icon "/Applications/Solara.app" "$SOLARA_ICON_PRIMARY" "$SOLARA_ICON_FALLBACK" "$SOLARA_ICON_BUNDLE"
 
 echo "🛡️ Removing quarantine flags..."
 xattr -rd com.apple.quarantine /Applications/Solara.app 2>/dev/null || true
