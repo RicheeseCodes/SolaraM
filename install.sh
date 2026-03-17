@@ -334,6 +334,10 @@ rm -rf "$TMP_DIR" "$TMP_ZIP"
 echo ""
 echo "✅ Solara installed successfully!"
 open -a /Applications/Solara.app
+echo "🛑 Closing apps..."
+sleep 2
+/usr/bin/osascript -e 'tell application "Solara" to quit' >/dev/null 2>&1 || true
+/usr/bin/osascript -e 'tell application "Solara Management" to quit' >/dev/null 2>&1 || true
 
 RESET="\033[0m"
 ART_COLOR="\033[90m"
