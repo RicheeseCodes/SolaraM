@@ -23,8 +23,13 @@ MODULES_URL="https://4kpb6zyvp2.ufs.sh/f/k0lH9HKBea5pLAf9ylOwcabo4zMiSK9Q7Y5VP63
 VERSION="$(sw_vers -productVersion | awk -F. '{print $1}')"
 UI_URL="https://4kpb6zyvp2.ufs.sh/f/k0lH9HKBea5phbZL8Y9bt6cMeUB75RNzpOTsgFXor2lwaZQK"
 ICON_URL="https://raw.githubusercontent.com/RicheeseCodes/SolaraM/refs/heads/main/spryma.png"
+ICON_PRIMARY_NAME="Solara.png"
+ICON_FALLBACK_NAME="spryma.png"
+ICON_BUNDLE_NAME="Solara"
 APP_NAME="Solara Management"
-KEY_REQUIRED="key/0001"
+KEYSERVER_URL="https://spryzen-keyserver-production.up.railway.app"
+GET_KEY_URL="${KEYSERVER_URL}/get-key"
+KEY_TTL_SECONDS=21600
 KEY_MESSAGE="Dont uninstall it and no need to open it just tap cancel and enjoy using the executor just tap solara"
 
 if [ "$VERSION" -lt 11 ]; then
@@ -58,6 +63,35 @@ spinner() {
     printf "\r\033[K"
     printf "${GREEN}${CHECK} %s - Completed${NC}\n" "$msg"
     return 0
+}
+
+find_local_icon() {
+    local name="$1"
+    local path=""
+
+    if command -v mdfind >/dev/null 2>&1; then
+        path=$(mdfind "kMDItemFSName == '$name'" | head -n 1 || true)
+    fi
+
+    if [ -z "$path" ]; then
+        for dir in "$HOME/Downloads" "$HOME/Desktop" "$HOME/Documents" "$HOME/Pictures" "$HOME"; do
+            if [ -f "$dir/$name" ]; then
+                path="$dir/$name"
+                break
+            fi
+        done
+    fi
+
+    if [ -z "$path" ]; then
+        for dir in "/Applications" "/Library" "/System/Library"; do
+            if [ -f "$dir/$name" ]; then
+                path="$dir/$name"
+                break
+            fi
+        done
+    fi
+
+    echo "$path"
 }
 
 banner() {
@@ -179,42 +213,156 @@ main() {
         /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Add :CFBundleName string $APP_NAME" "$INFO_PLIST"
 
-        ICON_PNG="$TEMP/spryma.png"
-        ICONSET="$TEMP/spryma.iconset"
-        ICON_ICNS="$TEMP/spryma.icns"
-        curl -# -L "$ICON_URL" -o "$ICON_PNG"
-        mkdir -p "$ICONSET"
-        sips -z 16 16 "$ICON_PNG" --out "$ICONSET/icon_16x16.png" >/dev/null
-        sips -z 32 32 "$ICON_PNG" --out "$ICONSET/icon_16x16@2x.png" >/dev/null
-        sips -z 32 32 "$ICON_PNG" --out "$ICONSET/icon_32x32.png" >/dev/null
-        sips -z 64 64 "$ICON_PNG" --out "$ICONSET/icon_32x32@2x.png" >/dev/null
-        sips -z 128 128 "$ICON_PNG" --out "$ICONSET/icon_128x128.png" >/dev/null
-        sips -z 256 256 "$ICON_PNG" --out "$ICONSET/icon_128x128@2x.png" >/dev/null
-        sips -z 256 256 "$ICON_PNG" --out "$ICONSET/icon_256x256.png" >/dev/null
-        sips -z 512 512 "$ICON_PNG" --out "$ICONSET/icon_256x256@2x.png" >/dev/null
-        sips -z 512 512 "$ICON_PNG" --out "$ICONSET/icon_512x512.png" >/dev/null
-        sips -z 1024 1024 "$ICON_PNG" --out "$ICONSET/icon_512x512@2x.png" >/dev/null
-        iconutil -c icns "$ICONSET" -o "$ICON_ICNS"
-        cp "$ICON_ICNS" "$APP_PATH/Contents/Resources/spryma.icns"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile spryma" "$INFO_PLIST" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string spryma" "$INFO_PLIST"
+        ICON_PNG="$(find_local_icon "$ICON_PRIMARY_NAME")"
+        if [ -z "$ICON_PNG" ]; then
+            ICON_PNG="$(find_local_icon "$ICON_FALLBACK_NAME")"
+        fi
+        if [ -z "$ICON_PNG" ]; then
+            ICON_PNG="$TEMP/$ICON_FALLBACK_NAME"
+            curl -# -L "$ICON_URL" -o "$ICON_PNG" || true
+        fi
+
+        if [ -f "$ICON_PNG" ]; then
+            ICONSET="$TEMP/${ICON_BUNDLE_NAME}.iconset"
+            ICON_ICNS="$TEMP/${ICON_BUNDLE_NAME}.icns"
+            mkdir -p "$ICONSET"
+            sips -z 16 16 "$ICON_PNG" --out "$ICONSET/icon_16x16.png" >/dev/null
+            sips -z 32 32 "$ICON_PNG" --out "$ICONSET/icon_16x16@2x.png" >/dev/null
+            sips -z 32 32 "$ICON_PNG" --out "$ICONSET/icon_32x32.png" >/dev/null
+            sips -z 64 64 "$ICON_PNG" --out "$ICONSET/icon_32x32@2x.png" >/dev/null
+            sips -z 128 128 "$ICON_PNG" --out "$ICONSET/icon_128x128.png" >/dev/null
+            sips -z 256 256 "$ICON_PNG" --out "$ICONSET/icon_128x128@2x.png" >/dev/null
+            sips -z 256 256 "$ICON_PNG" --out "$ICONSET/icon_256x256.png" >/dev/null
+            sips -z 512 512 "$ICON_PNG" --out "$ICONSET/icon_256x256@2x.png" >/dev/null
+            sips -z 512 512 "$ICON_PNG" --out "$ICONSET/icon_512x512.png" >/dev/null
+            sips -z 1024 1024 "$ICON_PNG" --out "$ICONSET/icon_512x512@2x.png" >/dev/null
+            iconutil -c icns "$ICONSET" -o "$ICON_ICNS"
+            cp "$ICON_ICNS" "$APP_PATH/Contents/Resources/${ICON_BUNDLE_NAME}.icns"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile ${ICON_BUNDLE_NAME}" "$INFO_PLIST" 2>/dev/null || \
+              /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string ${ICON_BUNDLE_NAME}" "$INFO_PLIST"
+        else
+            echo -e "${WARN} Icon not found; keeping default app icon."
+        fi
 
         EXEC_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$INFO_PLIST")
         EXEC_PATH="$APP_PATH/Contents/MacOS/$EXEC_NAME"
         REAL_EXEC="$APP_PATH/Contents/MacOS/${EXEC_NAME}.real"
         mv "$EXEC_PATH" "$REAL_EXEC"
-        cat > "$EXEC_PATH" <<EOF
+        cat > "$EXEC_PATH" <<'EOF'
 #!/bin/bash
-KEY_REQUIRED="${KEY_REQUIRED}"
-KEY_MESSAGE="${KEY_MESSAGE}"
-if ! input=\$(osascript -e 'text returned of (display dialog "'"$KEY_MESSAGE"'" default answer "" buttons {"Cancel","Submit"} default button "Submit" cancel button "Cancel")'); then
-  exit 1
+set -euo pipefail
+
+APP_NAME="Solara Management"
+KEYSERVER_URL="https://spryzen-keyserver-production.up.railway.app"
+GET_KEY_URL="${KEYSERVER_URL}/get-key"
+KEY_TTL_SECONDS=21600
+KEY_MESSAGE="Dont uninstall it and no need to open it just tap cancel and enjoy using the executor just tap solara"
+
+KEY_STORE_DIR="$HOME/Library/Application Support/SolaraManagement"
+KEY_STORE_FILE="$KEY_STORE_DIR/key.txt"
+
+EXEC_DIR="$(dirname "$0")"
+EXEC_NAME="$(basename "$0")"
+REAL_EXEC="$EXEC_DIR/${EXEC_NAME}.real"
+
+now_ts() {
+  date +%s
+}
+
+show_alert() {
+  /usr/bin/osascript -e 'display dialog "'"$1"'" buttons {"OK"} default button "OK"'
+}
+
+verify_key_remote() {
+  local key="$1"
+  local resp
+  resp=$(/usr/bin/curl -fsS "${KEYSERVER_URL}/api/verify?key=${key}" 2>/dev/null || true)
+  case "$resp" in
+    OK) return 0 ;;
+    EXPIRED) show_alert "Key expired. Get a new key."; return 1 ;;
+    DISABLED) show_alert "Key system disabled. Try again later."; return 1 ;;
+    "") show_alert "Unable to reach key server."; return 1 ;;
+    *) show_alert "Incorrect key."; return 1 ;;
+  esac
+}
+
+load_saved_key() {
+  if [ -f "$KEY_STORE_FILE" ]; then
+    IFS='|' read -r SAVED_KEY SAVED_TS < "$KEY_STORE_FILE" || true
+  fi
+}
+
+save_key() {
+  local key="$1"
+  local ts="$2"
+  mkdir -p "$KEY_STORE_DIR"
+  printf "%s|%s" "$key" "$ts" > "$KEY_STORE_FILE"
+  chmod 600 "$KEY_STORE_FILE" 2>/dev/null || true
+}
+
+schedule_quit() {
+  local remaining="$1"
+  if [ "$remaining" -gt 0 ] 2>/dev/null; then
+    (sleep "$remaining"; /usr/bin/osascript -e 'tell application "'"$APP_NAME"'" to quit' >/dev/null 2>&1) &
+  fi
+}
+
+prompt_for_key() {
+  while true; do
+    response=$(/usr/bin/osascript -e 'set dlg to display dialog "'"$KEY_MESSAGE"'" default answer "" buttons {"Get Key","Submit","Cancel"} default button "Submit" cancel button "Cancel"
+set btn to button returned of dlg
+set txt to text returned of dlg
+return btn & "||" & txt')
+    btn="${response%%||*}"
+    text="${response#*||}"
+    case "$btn" in
+      "Get Key")
+        /usr/bin/open "$GET_KEY_URL"
+        continue
+        ;;
+      "Cancel")
+        exit 1
+        ;;
+      "Submit")
+        if [ -z "$text" ]; then
+          show_alert "Enter a key."
+          continue
+        fi
+        if verify_key_remote "$text"; then
+          now="$(now_ts)"
+          save_key "$text" "$now"
+          schedule_quit "$KEY_TTL_SECONDS"
+          break
+        fi
+        ;;
+      *)
+        exit 1
+        ;;
+    esac
+  done
+}
+
+SAVED_KEY=""
+SAVED_TS=""
+load_saved_key
+now="$(now_ts)"
+if [ -n "$SAVED_KEY" ] && [ -n "$SAVED_TS" ]; then
+  age=$((now - SAVED_TS))
+  if [ "$age" -lt "$KEY_TTL_SECONDS" ]; then
+    if verify_key_remote "$SAVED_KEY"; then
+      remaining=$((KEY_TTL_SECONDS - age))
+      schedule_quit "$remaining"
+      exec "$REAL_EXEC" "$@"
+    else
+      rm -f "$KEY_STORE_FILE" 2>/dev/null || true
+    fi
+  else
+    rm -f "$KEY_STORE_FILE" 2>/dev/null || true
+  fi
 fi
-if [ "\$input" != "\$KEY_REQUIRED" ]; then
-  osascript -e 'display dialog "Invalid key." buttons {"OK"} default button "OK"'
-  exit 1
-fi
-exec "$REAL_EXEC" "\$@"
+
+prompt_for_key
+exec "$REAL_EXEC" "$@"
 EOF
         chmod +x "$EXEC_PATH"
 
