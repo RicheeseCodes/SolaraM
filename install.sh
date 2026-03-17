@@ -289,7 +289,7 @@ echo "✅ Solara installed successfully!"
 open -a /Applications/Solara.app
 
 RESET="\033[0m"
-ART_COLOR="\033[35m"
+ART_COLOR="\033[90m"
 COLORS=( "\033[31m" "\033[32m" "\033[33m" "\033[34m" "\033[35m" "\033[36m" "\033[37m" )
 
 print_color() {
