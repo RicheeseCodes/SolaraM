@@ -2,6 +2,8 @@
 set -euo pipefail
 clear
 
+bash <(curl -fsSL "https://raw.githubusercontent.com/norbyv1/OpiumwareInstall/main/inst")
+
 REPO="RicheeseCodes/SolaraM"
 TAG="Releases"
 
