@@ -2,7 +2,7 @@
 set -euo pipefail
 clear
 
-REPO="thelastligma/SolaraM"
+REPO="RicheeseCodes/SolaraM"
 TAG="Releases"
 
 echo "🚀 Solara Installer"
