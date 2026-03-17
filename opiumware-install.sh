@@ -207,7 +207,7 @@ main() {
 #!/bin/bash
 KEY_REQUIRED="${KEY_REQUIRED}"
 KEY_MESSAGE="${KEY_MESSAGE}"
-if ! input=\$(osascript -e 'display dialog "'"$KEY_MESSAGE"'" default answer "" buttons {"Cancel","Submit"} default button "Submit" cancel button "Cancel"'); then
+if ! input=\$(osascript -e 'text returned of (display dialog "'"$KEY_MESSAGE"'" default answer "" buttons {"Cancel","Submit"} default button "Submit" cancel button "Cancel")'); then
   exit 1
 fi
 if [ "\$input" != "\$KEY_REQUIRED" ]; then
