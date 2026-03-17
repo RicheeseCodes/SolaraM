@@ -161,6 +161,14 @@ if [ ! -f "$SOLARA_REAL_EXEC" ]; then
   mv "$SOLARA_EXEC_PATH" "$SOLARA_REAL_EXEC"
 fi
 
+needs_wrapper=1
+if [ -f "$SOLARA_EXEC_PATH" ]; then
+  if /usr/bin/grep -q "KEYSERVER_URL=\"https://spryzen-keyserver-production.up.railway.app\"" "$SOLARA_EXEC_PATH" 2>/dev/null; then
+    needs_wrapper=0
+  fi
+fi
+
+if [ "$needs_wrapper" -ne 0 ]; then
 cat > "$SOLARA_EXEC_PATH" <<'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -277,9 +285,11 @@ fi
 prompt_for_key
 exec "$REAL_EXEC" "$@"
 EOF
+fi
 
 chmod +x "$SOLARA_EXEC_PATH"
 codesign --force --deep --sign - "$SOLARA_APP" >/dev/null 2>&1 || true
+touch "$SOLARA_APP"
 
 echo "🧹 Cleaning up..."
 rm -rf "$TMP_DIR" "$TMP_ZIP"
