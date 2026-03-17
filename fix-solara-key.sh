@@ -146,5 +146,7 @@ chmod +x "$SOLARA_EXEC_PATH"
 xattr -rd com.apple.quarantine "$SOLARA_APP" 2>/dev/null || true
 codesign --force --deep --sign - "$SOLARA_APP" >/dev/null 2>&1 || true
 touch "$SOLARA_APP"
+rm -f "$HOME/Library/Application Support/Solara/key.txt" 2>/dev/null || true
 
 echo "✅ Solara key system fixed. Quit Solara and open it again."
+echo "ℹ️  Saved key cleared so the prompt will appear."
