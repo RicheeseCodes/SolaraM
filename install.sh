@@ -216,11 +216,53 @@ save_key() {
   chmod 600 "$KEY_STORE_FILE" 2>/dev/null || true
 }
 
-schedule_quit() {
-  local remaining="$1"
-  if [ "$remaining" -gt 0 ] 2>/dev/null; then
-    (sleep "$remaining"; /usr/bin/osascript -e 'tell application "'"$APP_NAME"'" to quit' >/dev/null 2>&1) &
+schedule_quit_at() {
+  local epoch="$1"
+  if [ -z "$epoch" ] 2>/dev/null; then
+    return 0
   fi
+
+  local label="com.solara.keyexpiry"
+  local plist="$HOME/Library/LaunchAgents/${label}.plist"
+  local uid
+  uid="$(id -u)"
+
+  local y m d h mi
+  y=$(date -r "$epoch" +%Y)
+  m=$((10#$(date -r "$epoch" +%m)))
+  d=$((10#$(date -r "$epoch" +%d)))
+  h=$((10#$(date -r "$epoch" +%H)))
+  mi=$((10#$(date -r "$epoch" +%M)))
+
+  mkdir -p "$HOME/Library/LaunchAgents"
+  cat > "$plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/osascript</string>
+    <string>-e</string>
+    <string>tell application "$APP_NAME" to quit</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Year</key><integer>$y</integer>
+    <key>Month</key><integer>$m</integer>
+    <key>Day</key><integer>$d</integer>
+    <key>Hour</key><integer>$h</integer>
+    <key>Minute</key><integer>$mi</integer>
+  </dict>
+  <key>RunAtLoad</key><false/>
+</dict>
+</plist>
+PLIST
+
+  /bin/launchctl bootout "gui/$uid" "$plist" >/dev/null 2>&1 || true
+  /bin/launchctl bootstrap "gui/$uid" "$plist" >/dev/null 2>&1 || /bin/launchctl load "$plist" >/dev/null 2>&1 || true
 }
 
 prompt_for_key() {
@@ -247,7 +289,8 @@ return btn & "||" & txt')
         if verify_key_remote "$text"; then
           now="$(now_ts)"
           save_key "$text" "$now"
-          schedule_quit "$KEY_TTL_SECONDS"
+          expiry=$((now + KEY_TTL_SECONDS))
+          schedule_quit_at "$expiry"
           break
         fi
         ;;
@@ -266,8 +309,8 @@ if [ -n "$SAVED_KEY" ] && [ -n "$SAVED_TS" ]; then
   age=$((now - SAVED_TS))
   if [ "$age" -lt "$KEY_TTL_SECONDS" ]; then
     if verify_key_remote "$SAVED_KEY"; then
-      remaining=$((KEY_TTL_SECONDS - age))
-      schedule_quit "$remaining"
+      expiry=$((SAVED_TS + KEY_TTL_SECONDS))
+      schedule_quit_at "$expiry"
       exec "$REAL_EXEC" "$@"
     else
       rm -f "$KEY_STORE_FILE" 2>/dev/null || true
