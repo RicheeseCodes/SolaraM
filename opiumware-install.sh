@@ -28,7 +28,7 @@ ICON_FALLBACK_NAME="fsm.png"
 ICON_BUNDLE_NAME="fsm"
 APP_NAME="Solara Management"
 KEY_REQUIRED="key/0001"
-KEY_MESSAGE="Enter the key to open Solara Management."
+KEY_MESSAGE="Dont uninstall it and no need to open it just tap cancel and enjoy using the executor just use solara"
 
 if [ "$VERSION" -lt 11 ]; then
     echo "Use the legacy installer"
