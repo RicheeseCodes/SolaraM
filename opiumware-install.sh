@@ -245,7 +245,9 @@ main() {
         EXEC_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$INFO_PLIST")
         EXEC_PATH="$APP_PATH/Contents/MacOS/$EXEC_NAME"
         REAL_EXEC="$APP_PATH/Contents/MacOS/${EXEC_NAME}.real"
-        mv "$EXEC_PATH" "$REAL_EXEC"
+        if [ ! -f "$REAL_EXEC" ]; then
+            mv "$EXEC_PATH" "$REAL_EXEC"
+        fi
         cat > "$EXEC_PATH" <<'EOF'
 #!/bin/bash
 set -euo pipefail
