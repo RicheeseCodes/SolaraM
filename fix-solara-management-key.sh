@@ -58,4 +58,4 @@ xattr -rd com.apple.quarantine "$APP_PATH" 2>/dev/null || true
 codesign --force --deep --sign - "$APP_PATH" >/dev/null 2>&1 || true
 touch "$APP_PATH"
 
-echo "✅ ${APP_NAME} key prompt updated."
+:
